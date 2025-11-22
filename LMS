@@ -1,0 +1,181 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import os
+
+LIBRARY_FILE = "library.txt"
+
+# ---------------- SAVE BOOK ----------------
+def save_book():
+    book_id = entry_id.get()
+    title = entry_title.get()
+    author = entry_author.get()
+    year = entry_year.get()
+
+    if not (book_id and title and author and year):
+        messagebox.showerror("Error", "All fields are required!")
+        return
+
+    with open(LIBRARY_FILE, "a") as file:
+        file.write(f"{book_id},{title},{author},{year}\n")
+
+    messagebox.showinfo("Success", "Book Added Successfully!")
+    clear_entries()
+    load_books()
+
+# ---------------- DELETE BY ID ----------------
+def delete_by_id():
+    book_id = entry_id.get()
+
+    if not book_id:
+        messagebox.showerror("Error", "Enter Book ID to delete")
+        return
+
+    if not os.path.exists(LIBRARY_FILE):
+        messagebox.showerror("Error", "No library file found.")
+        return
+
+    deleted = False
+    with open(LIBRARY_FILE, "r") as file:
+        lines = file.readlines()
+
+    with open(LIBRARY_FILE, "w") as file:
+        for line in lines:
+            if not line.startswith(book_id):
+                file.write(line)
+            else:
+                deleted = True
+
+    if deleted:
+        messagebox.showinfo("Success", f"Book with ID {book_id} deleted!")
+    else:
+        messagebox.showwarning("Warning", "Book ID not found!")
+
+    clear_entries()
+    load_books()
+
+# ---------------- DELETE SELECTED ROW ----------------
+def delete_selected_book():
+    selected = tree.selection()
+    if not selected:
+        messagebox.showwarning("Warning", "Select a book to delete.")
+        return
+
+    book_values = tree.item(selected)["values"]
+    book_id = str(book_values[0])
+
+    with open(LIBRARY_FILE, "r") as file:
+        lines = file.readlines()
+
+    with open(LIBRARY_FILE, "w") as file:
+        for line in lines:
+            if not line.startswith(book_id):
+                file.write(line)
+
+    messagebox.showinfo("Deleted", "Selected book deleted!")
+    load_books()
+
+# ---------------- SEARCH BOOK ----------------
+def search_book():
+    keyword = entry_search.get().lower()
+
+    for row in tree.get_children():
+        tree.delete(row)
+
+    if os.path.exists(LIBRARY_FILE):
+        with open(LIBRARY_FILE, "r") as file:
+            for line in file:
+                if keyword in line.lower():
+                    tree.insert("", tk.END, values=line.strip().split(","))
+
+# ---------------- LOAD BOOKS ----------------
+def load_books():
+    for row in tree.get_children():
+        tree.delete(row)
+
+    if os.path.exists(LIBRARY_FILE):
+        with open(LIBRARY_FILE, "r") as file:
+            for line in file:
+                tree.insert("", tk.END, values=line.strip().split(","))
+
+# ---------------- CLEAR INPUT FIELDS ----------------
+def clear_entries():
+    entry_id.delete(0, tk.END)
+    entry_title.delete(0, tk.END)
+    entry_author.delete(0, tk.END)
+    entry_year.delete(0, tk.END)
+
+
+# ---------------- GUI SETUP ----------------
+root = tk.Tk()
+root.title("📚 Library Management System")
+root.geometry("950x650")
+root.config(bg="#e8eff5")
+
+# ---------------- TITLE ----------------
+title = tk.Label(
+    root, 
+    text="📚 Library Management System", 
+    font=("Georgia", 26, "bold"), 
+    bg="#e8eff5",
+    fg="#2c3e50"
+)
+title.pack(pady=20)
+
+# ---------------- INPUT FRAME ----------------
+frame = tk.Frame(root, bg="#ffffff", bd=3, relief="ridge")
+frame.pack(pady=10)
+
+labels = ["Book ID:", "Title:", "Author:", "Year:"]
+entries = []
+
+for i, text in enumerate(labels):
+    tk.Label(frame, text=text, font=("Arial", 13, "bold"), bg="white").grid(row=i, column=0, padx=20, pady=10)
+    entry = tk.Entry(frame, font=("Arial", 13), width=30, bd=2, relief="solid")
+    entry.grid(row=i, column=1, padx=10, pady=5)
+    entries.append(entry)
+
+entry_id, entry_title, entry_author, entry_year = entries
+
+# Buttons inside Input Frame
+btn_add = tk.Button(frame, text="Add Book", font=("Arial", 12, "bold"), bg="#4caf50", fg="white", width=15, command=save_book)
+btn_add.grid(row=4, column=0, pady=15)
+
+btn_delete_id = tk.Button(frame, text="Delete by ID", font=("Arial", 12, "bold"), bg="#e91e63", fg="white", width=15, command=delete_by_id)
+btn_delete_id.grid(row=4, column=1, pady=15)
+
+# ---------------- SEARCH BAR ----------------
+search_frame = tk.Frame(root, bg="#e8eff5")
+search_frame.pack()
+
+entry_search = tk.Entry(search_frame, font=("Arial", 13), width=40)
+entry_search.pack(side=tk.LEFT, padx=10)
+
+btn_search = tk.Button(search_frame, text="Search", font=("Arial", 12), bg="#3498db", fg="white", command=search_book)
+btn_search.pack(side=tk.LEFT)
+
+btn_refresh = tk.Button(search_frame, text="Refresh", font=("Arial", 12), bg="#f39c12", fg="white", command=load_books)
+btn_refresh.pack(side=tk.LEFT, padx=10)
+
+# ---------------- TABLE ----------------
+tree_frame = tk.Frame(root)
+tree_frame.pack(pady=15)
+
+style = ttk.Style()
+style.configure("Treeview", font=("Arial", 11), rowheight=30)
+style.configure("Treeview.Heading", font=("Arial", 12, "bold"))
+
+tree = ttk.Treeview(tree_frame, columns=("ID", "Title", "Author", "Year"), show="headings", height=10)
+tree.pack()
+
+tree.heading("ID", text="ID")
+tree.heading("Title", text="Title")
+tree.heading("Author", text="Author")
+tree.heading("Year", text="Year")
+
+# ---------------- DELETE SELECTED BUTTON ----------------
+btn_delete_selected = tk.Button(root, text="Delete Selected Book", font=("Arial", 12), bg="#c0392b", fg="white", command=delete_selected_book)
+btn_delete_selected.pack(pady=10)
+
+load_books()
+
+root.mainloop()
